@@ -1,0 +1,1 @@
+# Tabela baseada em Rating.csv

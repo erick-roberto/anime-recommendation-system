@@ -1,0 +1,1 @@
+# Endpoint que retorna as recomendações

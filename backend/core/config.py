@@ -1,0 +1,1 @@
+# Carrega o .env 

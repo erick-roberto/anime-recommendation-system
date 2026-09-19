@@ -1,0 +1,1 @@
+# Configuração da engine do SQLAlchemy para o SQLite

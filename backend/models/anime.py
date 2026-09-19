@@ -1,0 +1,1 @@
+# Tabela baseada em Anime.csv

@@ -1,0 +1,1 @@
+# Modelos Pydantic (Validação de I/O)
