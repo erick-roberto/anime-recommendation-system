@@ -1,122 +1,98 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import React, { useState } from 'react';
+import { ThemeProvider, CssBaseline, Container } from '@mui/material';
+import NavBar from './components/NavBar';
+import Home from './pages/Home';
+import Profile from './pages/Profile';
+import AuthModal from './components/AuthModal';
+import theme from './theme';
 
-function App() {
-  const [count, setCount] = useState(0)
+// Importe os dados centralizados
+import { MOCK_USER, MOCK_USER_HISTORY } from './data/mockData';
+
+export default function App() {
+  const [currentView, setCurrentView] = useState('home');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState(null);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [userHistory, setUserHistory] = useState([]);
+
+  const handleLoginSuccess = (userData) => {
+    setUser(userData);
+    setIsLoggedIn(true);
+
+    // Se for o nosso utilizador mockado principal, carrega as notas dele.
+    // Se for um registo novo ou outro email, começa com um array vazio.
+    if (userData.email === MOCK_USER.email) {
+      setUserHistory(MOCK_USER_HISTORY);
+    } else {
+      setUserHistory([]);
+    }
+  };
+  const handleUpdateRating = (animeId, newRating) => {
+    setUserHistory((prev) =>
+      prev.map((item) => (item.anime_id === animeId ? { ...item, userRating: newRating } : item))
+    );
+  };
+
+  const handleRemoveRating = (animeId) => {
+    setUserHistory((prev) => prev.filter((item) => item.anime_id !== animeId));
+  };
+
+const handleLogout = () => {
+    setIsLoggedIn(false);
+    setUser(null);
+    setUserHistory([]);
+    setCurrentView('home');
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <NavBar
+        isLoggedIn={isLoggedIn}
+        user={user}
+        onLoginClick={() => setIsAuthOpen(true)}
+        onLogoutClick={handleLogout}
+        onProfileClick={() => setCurrentView('profile')}
+        onHomeClick={() => setCurrentView('home')} // Volta para a Home ao clicar na Logo
+      />
 
-      <div className="ticks"></div>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      {/* 3. Apenas o CONTEÚDO da página vai dentro do Container */}
+      <Container maxWidth="100%" sx={{ mt: 4 }}>
+        {currentView === 'home' ? (
+          <Home
+            isLoggedIn={isLoggedIn}
+            userHistory={userHistory} // <-- ADICIONE ESTA LINHA!
+            onRateAnime={(anime, rating) => {
+              setUserHistory((prev) => {
+                const existeNoHistorico = prev.find(item => item.anime_id === anime.anime_id);
+                if (existeNoHistorico) {
+                  return prev.map(item =>
+                    item.anime_id === anime.anime_id ? { ...item, userRating: rating } : item
+                  );
+                } else {
+                  return [...prev, { ...anime, userRating: rating }];
+                }
+              });
+            }}
+          />
+        ) : (
+          <Profile
+            user={user}
+            history={userHistory}
+            onUpdateRating={handleUpdateRating}
+            onRemoveRating={handleRemoveRating}
+          />
+        )}
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        <AuthModal
+          open={isAuthOpen}
+          onClose={() => setIsAuthOpen(false)}
+          onLoginSuccess={handleLoginSuccess}
+        />
+      </Container>
+
+    </ThemeProvider>
+  );
 }
-
-export default App
