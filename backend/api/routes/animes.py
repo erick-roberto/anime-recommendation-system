@@ -1,8 +1,8 @@
 # Busca de animes e envio de notas
 from fastapi import APIRouter, Depends
-from db.session import get_db
+from backend.db.session import get_db
 from sqlalchemy.orm import Session
-from models.anime import Anime
+from backend.models.anime import Anime
 
 anime_router = APIRouter(prefix="/animes", tags=["Animes"])
 

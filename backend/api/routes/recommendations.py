@@ -1,7 +1,7 @@
 # Endpoint que retorna as recomendações
 
 from fastapi import APIRouter, Depends
-from db.session import get_db
+from backend.db.session import get_db
 from sqlalchemy.orm import Session
 
 recommendation_router = APIRouter(prefix="/recomendacoes", tags=["recomendacoes"])
