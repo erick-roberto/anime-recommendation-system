@@ -1,11 +1,14 @@
-# configura a conexão/engine com o SQLite
+from pathlib import Path
 from sqlalchemy import create_engine
 
 
-DATABASE_URL = "sqlite:///./data/anime.db"
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+DATABASE_URL = f"sqlite:///{BASE_DIR / 'data' / 'anime.db'}"
 
 engine = create_engine(
-    DATABASE_URL, connect_args={"check_same_thread": False}
+    DATABASE_URL,
+    connect_args={"check_same_thread": False}
 )
 
 
