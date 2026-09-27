@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
-import { ThemeProvider, CssBaseline, Container } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { ThemeProvider, CssBaseline, Container, Box, CircularProgress } from '@mui/material';
 import NavBar from './components/NavBar';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
 import AuthModal from './components/AuthModal';
 import theme from './theme';
 
-// Importe os dados centralizados
-import { MOCK_USER, MOCK_USER_HISTORY } from './data/mockData';
+// Importa os serviços reais
+import { authService, userService } from './api/auth_api'
 
 export default function App() {
   const [currentView, setCurrentView] = useState('home');
@@ -15,35 +15,99 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [userHistory, setUserHistory] = useState([]);
+  const [isInitializing, setIsInitializing] = useState(true);
 
-  const handleLoginSuccess = (userData) => {
+  // 1. EFEITO DE INICIALIZAÇÃO: Mantém logado ao dar reload
+  useEffect(() => {
+    const restoreSession = async () => {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        setIsInitializing(false);
+        return;
+      }
+
+      try {
+        // Valida o token no backend e traz os dados do usuário autenticado
+        const userData = await authService.getMe();
+        setUser(userData);
+        setIsLoggedIn(true);
+
+        // Busca o histórico real de notas do usuário no banco
+        const ratings = await userService.getRatings().catch(() => []);
+        setUserHistory(Array.isArray(ratings) ? ratings : []);
+      } catch (err) {
+        // Se o token estiver expirado ou inválido, limpa a sessão
+        console.warn('Sessão expirada ou inválida:', err);
+        authService.logout();
+        setIsLoggedIn(false);
+        setUser(null);
+      } finally {
+        setIsInitializing(false);
+      }
+    };
+
+    restoreSession();
+  }, []);
+
+  // 2. SUCESSO NO LOGIN (chamado pelo AuthModal)
+  const handleLoginSuccess = async (userData) => {
     setUser(userData);
     setIsLoggedIn(true);
 
-    // Se for o nosso utilizador mockado principal, carrega as notas dele.
-    // Se for um registo novo ou outro email, começa com um array vazio.
-    if (userData.email === MOCK_USER.email) {
-      setUserHistory(MOCK_USER_HISTORY);
-    } else {
+    try {
+      const ratings = await userService.getRatings().catch(() => []);
+      setUserHistory(Array.isArray(ratings) ? ratings : []);
+    } catch {
       setUserHistory([]);
     }
   };
-  const handleUpdateRating = (animeId, newRating) => {
+
+  // 3. ATUALIZAR NOTA (sincroniza com o backend)
+  const handleUpdateRating = async (animeId, newRating) => {
     setUserHistory((prev) =>
-      prev.map((item) => (item.anime_id === animeId ? { ...item, userRating: newRating } : item))
+      prev.map((item) =>
+        item.anime_id === animeId ? { ...item, userRating: newRating } : item
+      )
     );
+
+    try {
+      await userService.upsertRating(animeId, newRating);
+    } catch (err) {
+      console.error('Erro ao atualizar nota:', err);
+    }
   };
 
-  const handleRemoveRating = (animeId) => {
+  // 4. REMOVER NOTA (sincroniza com o backend)
+  const handleRemoveRating = async (animeId) => {
     setUserHistory((prev) => prev.filter((item) => item.anime_id !== animeId));
+
+    try {
+      await userService.deleteRating(animeId);
+    } catch (err) {
+      console.error('Erro ao remover nota:', err);
+    }
   };
 
-const handleLogout = () => {
+  // 5. LOGOUT
+  const handleLogout = () => {
+    authService.logout();
     setIsLoggedIn(false);
     setUser(null);
     setUserHistory([]);
     setCurrentView('home');
   };
+
+  // Evita "piscar" a tela de login enquanto valida o token
+  if (isInitializing) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: '#0b0c10' }}>
+          <CircularProgress color="secondary" />
+        </Box>
+      </ThemeProvider>
+    );
+  }
 
   return (
     <ThemeProvider theme={theme}>
@@ -54,27 +118,17 @@ const handleLogout = () => {
         onLoginClick={() => setIsAuthOpen(true)}
         onLogoutClick={handleLogout}
         onProfileClick={() => setCurrentView('profile')}
-        onHomeClick={() => setCurrentView('home')} // Volta para a Home ao clicar na Logo
+        onHomeClick={() => setCurrentView('home')}
       />
 
-
-      {/* 3. Apenas o CONTEÚDO da página vai dentro do Container */}
       <Container maxWidth="100%" sx={{ mt: 4 }}>
         {currentView === 'home' ? (
           <Home
             isLoggedIn={isLoggedIn}
-            userHistory={userHistory} // <-- ADICIONE ESTA LINHA!
+            userHistory={userHistory}
             onRateAnime={(anime, rating) => {
-              setUserHistory((prev) => {
-                const existeNoHistorico = prev.find(item => item.anime_id === anime.anime_id);
-                if (existeNoHistorico) {
-                  return prev.map(item =>
-                    item.anime_id === anime.anime_id ? { ...item, userRating: rating } : item
-                  );
-                } else {
-                  return [...prev, { ...anime, userRating: rating }];
-                }
-              });
+              const animeId = anime.anime_id || anime.id;
+              handleUpdateRating(animeId, rating);
             }}
           />
         ) : (
@@ -92,7 +146,6 @@ const handleLogout = () => {
           onLoginSuccess={handleLoginSuccess}
         />
       </Container>
-
     </ThemeProvider>
   );
 }

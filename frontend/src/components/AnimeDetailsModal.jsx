@@ -18,15 +18,15 @@ import MovieIcon from '@mui/icons-material/Movie';
 import GroupIcon from '@mui/icons-material/Group';
 import MovieFilterIcon from '@mui/icons-material/MovieFilter';
 
-export default function AnimeDetailsModal({ open, onClose, anime, onRate, isLoggedIn}) {
+export default function AnimeDetailsModal({ open, onClose, anime, onRate, isLoggedIn }) {
   if (!anime) return null;
 
   // Processa todos os gêneros (sem limite de 3)
   const genresList = Array.isArray(anime.genre)
     ? anime.genre
     : anime.genre
-    ? anime.genre.split(',').map((g) => g.trim())
-    : [];
+      ? anime.genre.split(',').map((g) => g.trim())
+      : [];
 
   // Formata o número de membros (Ex: 1250000 -> 1.250.000)
   const formattedMembers = anime.members
@@ -141,8 +141,9 @@ export default function AnimeDetailsModal({ open, onClose, anime, onRate, isLogg
             {/* 2. Muda o texto se não estiver logado */}
             {isLoggedIn ? 'Sua Avaliação para este Anime:' : 'Faça login para poder avaliar'}
           </Typography>
-          
+
           <Rating
+            max={10}
             size="medium"
             precision={1}
             value={anime.userRating || null}
