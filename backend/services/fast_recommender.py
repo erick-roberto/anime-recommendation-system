@@ -9,7 +9,8 @@ import numpy as np
 from sqlalchemy import select, delete
 from ..db.session import SessionLocal
 from ..models.rating import Rating
-from ..models.user_similary import UserSimilarity
+from ..models.user_similary import UserSimilarity # usando cosseno
+from ..models.user_pearson_similarity import UserPearsonSimilarity # usando Pearson
 
 def calcular_cosseno(r1: np.ndarray, r2: np.ndarray) -> float:
     xy = np.dot(r1, r2)
@@ -18,6 +19,27 @@ def calcular_cosseno(r1: np.ndarray, r2: np.ndarray) -> float:
     if xy == 0 or sum_x2 == 0 or sum_y2 == 0:
         return 0.0
     return float(xy / (sqrt(sum_x2) * sqrt(sum_y2)))
+
+# Função para calcular a similaridade de Pearson
+def pearson(rating1, rating2):
+    n = len(rating1)
+
+    if n == 0:
+        return 0.0
+
+    sum_x = np.sum(rating1)
+    sum_y = np.sum(rating2)
+    sum_xy = np.dot(rating1, rating2)
+    sum_x2 = np.sum(rating1 ** 2)
+    sum_y2 = np.sum(rating2 ** 2)
+
+    termo_x = sum_x2 - (sum_x ** 2) / n
+    termo_y = sum_y2 - (sum_y ** 2) / n
+
+    if termo_x <= 0 or termo_y <= 0:
+        return 0.0
+
+    return ((sum_xy - (sum_x * sum_y) / n) / np.sqrt(termo_x * termo_y))
 
 def atualizar_similaridades_fast(
     usuario_alvo_id: int,
@@ -78,6 +100,7 @@ def atualizar_similaridades_fast(
 
         # 5. Calcula similaridade apenas sobre os itens em comum
         scores = []
+        scores_pearson = []
         for uid in candidatos_selecionados:
             notas_outro = mapa_candidatos[uid]
             comuns = [aid for aid in animes_alvo_ids if aid in notas_outro]
@@ -86,15 +109,21 @@ def atualizar_similaridades_fast(
             vetor2 = np.array([notas_outro[aid] for aid in comuns])
 
             sim = calcular_cosseno(vetor1, vetor2)
+            sim_pearson = pearson(vetor1,  vetor2)
             if sim > 0:
                 scores.append((uid, sim))
+            if sim_pearson > 0:
+                scores_pearson.append((uid, sim_pearson))
 
-        if not scores:
+        if not scores and not scores_pearson:
             return
 
         # 6. Top K mais similares
         scores.sort(key=lambda x: x[1], reverse=True)
         top_vizinhos = scores[:k_vizinhos]
+
+        scores_pearson.sort(key=lambda x: x[1], reverse=True)
+        top_vizinhos_pearson = scores_pearson[:k_vizinhos]
 
         # 7. Persiste no SQLite
         session.execute(
@@ -110,6 +139,21 @@ def atualizar_similaridades_fast(
             for vizinho_id, sim in top_vizinhos
         ]
         session.add_all(novos_vizinhos)
+
+        session.execute(
+            delete(UserPearsonSimilarity).where(UserPearsonSimilarity.usuario_1 == usuario_alvo_id))
+
+        novos_vizinhos_pearson = [
+            UserPearsonSimilarity(
+                usuario_1=usuario_alvo_id,
+                usuario_2=vizinho_id,
+                similaridade=round(sim, 5)
+            )
+            for vizinho_id, sim in top_vizinhos_pearson
+        ]
+
+        session.add_all(novos_vizinhos_pearson)
+
         session.commit()
 
         tempo_exec = (time.perf_counter() - inicio) * 1000

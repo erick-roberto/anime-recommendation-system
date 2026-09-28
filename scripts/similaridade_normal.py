@@ -28,6 +28,27 @@ def cosseno(rating1, rating2):
 
     return xy / (sqrt(sum_x2) * sqrt(sum_y2))
 
+# Função para calcular a similaridade de Pearson
+def pearson(rating1, rating2):
+    n = len(rating1)
+
+    if n == 0:
+        return 0.0
+
+    sum_x = np.sum(rating1)
+    sum_y = np.sum(rating2)
+    sum_xy = np.dot(rating1, rating2)
+    sum_x2 = np.sum(rating1 ** 2)
+    sum_y2 = np.sum(rating2 ** 2)
+
+    termo_x = sum_x2 - (sum_x ** 2) / n
+    termo_y = sum_y2 - (sum_y ** 2) / n
+
+    if termo_x <= 0 or termo_y <= 0:
+        return 0.0
+
+    return ((sum_xy - (sum_x * sum_y) / n) / np.sqrt(termo_x * termo_y))
+
 session = SessionLocal()
 try:
     ratings = session.execute(
@@ -82,7 +103,7 @@ for user_idx in range(total_usuarios):
         rating2 = (vetor_2[:,indices_comuns].toarray().flatten())
 
         # calcula a similaridade
-        similaridade = cosseno(rating1, rating2)
+        similaridade = pearson(rating1, rating2)    
 
         # registro das relações nos dois sentidos (A -> B) e (B -> A)
         vizinhos[user_idx].append((outro_idx, similaridade))
@@ -112,7 +133,7 @@ for user_idx in range(total_usuarios):
 
 df_vizinhos = pd.DataFrame(resultados)
 
-df_vizinhos.to_csv("vizinhos_usuarios_padrao.csv", index=False)
+df_vizinhos.to_csv("vizinhos_usuarios_padrao_pearson.csv", index=False)
 
 print(df_vizinhos.head(100))
 
