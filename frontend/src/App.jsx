@@ -5,9 +5,8 @@ import Home from './pages/Home';
 import Profile from './pages/Profile';
 import AuthModal from './components/AuthModal';
 import theme from './theme';
-
-// Importa os serviços reais
-import { authService, userService } from './api/api'
+import { authService, userService } from './api/api';
+import AnimeDetailsModal from './components/AnimeDetailsModal';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('home');
@@ -16,6 +15,13 @@ export default function App() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [userHistory, setUserHistory] = useState([]);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [selectedAnime, setSelectedAnime] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleOpenAnimeModal = (anime) => {
+    setSelectedAnime(anime);
+    setIsModalOpen(true);
+  };
 
   // 1. EFEITO DE INICIALIZAÇÃO: Mantém logado ao dar reload
   useEffect(() => {
@@ -27,16 +33,13 @@ export default function App() {
       }
 
       try {
-        // Valida o token no backend e traz os dados do usuário autenticado
         const userData = await authService.getMe();
         setUser(userData);
         setIsLoggedIn(true);
 
-        // Busca o histórico real de notas do usuário no banco
         const ratings = await userService.getRatings().catch(() => []);
         setUserHistory(Array.isArray(ratings) ? ratings : []);
       } catch (err) {
-        // Se o token estiver expirado ou inválido, limpa a sessão
         console.warn('Sessão expirada ou inválida:', err);
         authService.logout();
         setIsLoggedIn(false);
@@ -64,53 +67,49 @@ export default function App() {
 
   // 3. ATUALIZAR NOTA (sincroniza com o backend)
   const handleUpdateRating = async (animeTarget, newRating) => {
-  // 1. Descobre se veio o objeto completo ou apenas o ID
-  const isObject = typeof animeTarget === 'object' && animeTarget !== null;
-  const animeId = isObject ? (animeTarget.anime_id || animeTarget.id) : animeTarget;
-  const animeData = isObject ? animeTarget : {};
+    const isObject = typeof animeTarget === 'object' && animeTarget !== null;
+    const animeId = isObject ? (animeTarget.anime_id || animeTarget.id) : animeTarget;
+    const animeData = isObject ? animeTarget : {};
 
-  // 2. Atualiza o estado preservando ou adicionando os metadados
-  setUserHistory((prev) => {
-    const existingIndex = prev.findIndex(
-      (item) => (item.anime_id || item.id) === animeId
-    );
-
-    if (existingIndex >= 0) {
-      // Se já existia, atualiza apenas as notas mantendo name, genre, etc.
-      return prev.map((item, idx) =>
-        idx === existingIndex
-          ? { ...item, userRating: newRating, rating: newRating }
-          : item
+    setUserHistory((prev) => {
+      const existingIndex = prev.findIndex(
+        (item) => (item.anime_id || item.id) === animeId
       );
-    } else {
-      // SE FOR NOVO: injeta os dados visuais completos vindos do Card/Modal!
-      return [
-        ...prev,
-        {
-          ...animeData, // <-- Garante name, genre, type, img, etc.
-          anime_id: animeId,
-          name: animeData.name || animeData.nome || `Anime #${animeId}`,
-          genre: animeData.genre || '',
-          type: animeData.type || 'TV',
-          img: animeData.img || animeData.image_url || '',
-          userRating: newRating,
-          rating: newRating,
-        },
-      ];
-    }
-  });
 
-  // 3. Persiste no banco de dados via API
-  try {
-    await userService.upsertRating(animeId, newRating);
-  } catch (err) {
-    console.error('Erro ao salvar avaliação no backend:', err);
-  }
-};
+      if (existingIndex >= 0) {
+        return prev.map((item, idx) =>
+          idx === existingIndex
+            ? { ...item, userRating: newRating, rating: newRating }
+            : item
+        );
+      } else {
+        return [
+          ...prev,
+          {
+            ...animeData,
+            anime_id: animeId,
+            name: animeData.name || animeData.nome || `Anime #${animeId}`,
+            genre: animeData.genre || '',
+            type: animeData.type || 'TV',
+            img: animeData.img || animeData.image_url || '',
+            image_url: animeData.image_url || animeData.img || '',
+            userRating: newRating,
+            rating: newRating,
+          },
+        ];
+      }
+    });
+
+    try {
+      await userService.upsertRating(animeId, newRating);
+    } catch (err) {
+      console.error('Erro ao salvar avaliação no backend:', err);
+    }
+  };
 
   // 4. REMOVER NOTA (sincroniza com o backend)
   const handleRemoveRating = async (animeId) => {
-    setUserHistory((prev) => prev.filter((item) => item.anime_id !== animeId));
+    setUserHistory((prev) => prev.filter((item) => (item.anime_id || item.id) !== animeId));
 
     try {
       await userService.deleteRating(animeId);
@@ -128,7 +127,13 @@ export default function App() {
     setCurrentView('home');
   };
 
-  // Evita "piscar" a tela de login enquanto valida o token
+  // Recupera a nota que o usuário já deu para o anime selecionado (se houver)
+  const currentSelectedRating = selectedAnime
+    ? userHistory.find(
+        (item) => (item.anime_id || item.id) === (selectedAnime.anime_id || selectedAnime.id)
+      )?.rating || 0
+    : 0;
+
   if (isInitializing) {
     return (
       <ThemeProvider theme={theme}>
@@ -146,21 +151,32 @@ export default function App() {
       <NavBar
         isLoggedIn={isLoggedIn}
         user={user}
-        onLoginClick={() => setIsAuthOpen(true)}
-        onLogoutClick={handleLogout}
-        onProfileClick={() => setCurrentView('profile')}
         onHomeClick={() => setCurrentView('home')}
+        onProfileClick={() => setCurrentView('profile')}
+        onLoginClick={() => setIsAuthOpen(true)} // <-- 2. Corrigido de setIsAuthModalOpen para setIsAuthOpen
+        onLogoutClick={handleLogout}
+        onSelectAnime={handleOpenAnimeModal}
       />
 
-      <Container maxWidth="100%" sx={{ mt: 4 }}>
+      {/* Modal acionado pela busca da Navbar ou cliques nos cards */}
+      {selectedAnime && (
+        <AnimeDetailsModal
+          open={isModalOpen}
+          anime={selectedAnime}
+          currentRating={currentSelectedRating}
+          onClose={() => setIsModalOpen(false)}
+          onRate={(id, score) => handleUpdateRating(selectedAnime, score)}
+        />
+      )}
+
+      <Container maxWidth="100%" sx={{ mt: 4, mb: 4 }}>
         {currentView === 'home' ? (
           <Home
             isLoggedIn={isLoggedIn}
             user={user}
             userHistory={userHistory}
             onRateAnime={(anime, rating) => {
-              const animeId = anime.anime_id || anime.id;
-              handleUpdateRating(animeId, rating);
+              handleUpdateRating(anime, rating);
             }}
           />
         ) : (

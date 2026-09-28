@@ -10,6 +10,7 @@ class AnimeCardResponse(BaseModel):
     type: Optional[str] = None
     score: Optional[float] = None
     members: Optional[int] = None
+    image_url: Optional[str] = None
 
     class Config:
         from_attributes = True

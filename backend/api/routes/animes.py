@@ -1,16 +1,31 @@
 # backend/api/routes/ratings.py
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Query, Session
+from sqlalchemy import select, desc
 
 from backend.db.session import get_db
 from backend.models.user import User
 from backend.models.rating import Rating
 from backend.models.anime import Anime
+from backend.schemas.anime import AnimeCardResponse
 from backend.schemas.rating import RatingCreate, UserRatedAnimeResponse
 from backend.api.dependencies import get_current_user
 
 router = APIRouter(prefix="/users/me/ratings", tags=["User Ratings"])
+
+@router.get("/search", response_model=List[AnimeCardResponse])
+def search_animes(
+    q: str = "",
+    db: Session = Depends(get_db)
+):
+    stmt = (
+        select(Anime)
+        .where(Anime.name.ilike(f"%{q}%"))
+        .order_by(Anime.members.desc().nullslast())
+        .limit(8)
+    )
+    return db.execute(stmt).scalars().all()
 
 
 @router.get("", response_model=List[UserRatedAnimeResponse])
@@ -29,6 +44,7 @@ def get_user_ratings(
             Anime.genre,
             Anime.type,
             Rating.rating.label("userRating"),
+            Anime.image_url
         )
         .join(Anime, Rating.anime_id == Anime.anime_id)
         .filter(Rating.user_id == current_user.user_id)
@@ -42,6 +58,7 @@ def get_user_ratings(
             genre=r.genre,
             type=r.type,
             userRating=r.userRating,
+            image_url=r.image_url
         )
         for r in results
     ]

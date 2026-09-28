@@ -25,4 +25,5 @@ class Anime(Base):
     episodes = Column("episodes", Text)
     rating = Column("rating", REAL)
     members = Column("members", Integer)
+    image_url = Column("image_url", Text, nullable=True) 
 
