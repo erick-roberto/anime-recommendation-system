@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select, desc
 
 from backend.db.session import get_db
-from backend.services.recommender import recommend_users_based
+from backend.services.recommender import recommend_users_based, recommend_users_based_pearson
 from backend.models.anime import Anime
 from backend.schemas.anime import AnimeCardResponse
 
@@ -111,7 +111,24 @@ def get_shonen_animes(
     return [dict(row) for row in rows]
 
 
-# 4. RECOMENDAÇÕES DO KNN (Rota dinâmica sempre por último!)
+# 5. RECOMENDAÇÕES BASEADAS EM PEARSON
+@recommendation_router.get(
+    "/pearson/{usuario_alvo}",
+    response_model=List[AnimeCardResponse]
+)
+def get_recommendations_pearson(
+    usuario_alvo: int,
+    session: Session = Depends(get_db)
+):
+    recomendacoes = recommend_users_based_pearson(
+        usuario_alvo=usuario_alvo,
+        session=session
+    )
+
+    return recomendacoes
+
+
+# 4. RECOMENDAÇÕES DO KNN (Rota dinâmica sempre por último!) baseadas em cosseno    
 @recommendation_router.get("/{usuario_alvo}", response_model=List[AnimeCardResponse])
 def get_recommendations_for_user(
     usuario_alvo: int, 

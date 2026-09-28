@@ -20,7 +20,6 @@ def calcular_cosseno(r1: np.ndarray, r2: np.ndarray) -> float:
         return 0.0
     return float(xy / (sqrt(sum_x2) * sqrt(sum_y2)))
 
-# Função para calcular a similaridade de Pearson
 def pearson(rating1, rating2):
     n = len(rating1)
 
@@ -51,12 +50,26 @@ def atualizar_similaridades_fast(
     session = SessionLocal()
 
     try:
-        # 1. Busca notas do usuário alvo
+        '''
+        Busca os IDs e notas dos animes do usuário alvo
+        '''
         ratings_alvo = session.execute(
             select(Rating.anime_id, Rating.rating)
             .where(Rating.user_id == usuario_alvo_id, Rating.rating != -1)
         ).all()
 
+        quantidade_avaliacoes = len(ratings_alvo)
+
+        # o cálculo só ocorre se houver mneos de 200 avaliações
+        if quantidade_avaliacoes >= 200:
+            print(
+                f"[FAST] Usuário {usuario_alvo_id} já possui "
+                f"{quantidade_avaliacoes} avaliações. "
+                f"Similaridade pré-calculada."
+            )
+            return
+        
+        # n calcula se tiver menos de 5
         if len(ratings_alvo) < min_comum:
             print(f"[FAST] Usuário {usuario_alvo_id} possui apenas {len(ratings_alvo)} notas. Mínimo exigido: {min_comum}.")
             return
