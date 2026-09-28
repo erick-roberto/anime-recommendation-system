@@ -83,7 +83,7 @@ export default function AnimeCard({ anime, isRanked = false, onClick }) {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
           <StarIcon sx={{ fontSize: 16, color: '#ffb400' }} />
           <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#fff' }}>
-            {anime.score || anime.rating || 'N/A'}
+            {anime.rating || 'N/A'}
           </Typography>
         </Box>
 

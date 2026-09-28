@@ -275,6 +275,7 @@ def main():
         rec_global = recall_score(y_true_bin, y_pred_bin, zero_division=0)
         f1_global = f1_score(y_true_bin, y_pred_bin, zero_division=0)
         cm = confusion_matrix(y_true_bin, y_pred_bin)
+        especificidade = recall_score(y_true_bin, y_pred_bin, pos_label=0) 
         
         # Macro-Averaging (Anti-viés de Heavy Users)
         macro_mae = np.mean(user_maes)
@@ -299,6 +300,7 @@ def main():
         print(f"Desvio Padrão da Acurácia  : ±{np.std(user_accuracies) * 100:.2f}%")
         print(f"Precisão                   : {prec_global:.3f}")
         print(f"Recall (Sensibilidade)     : {rec_global:.3f}")
+        print(f"Especificidade             : {especificidade:.3f} <-- (Capacidade de prever notas ruins)")
         print(f"F1-Score                   : {f1_global:.3f}")
 
         print("\n--- 3. Matriz de Confusão ---")

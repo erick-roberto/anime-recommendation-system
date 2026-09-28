@@ -29,9 +29,7 @@ export default function AnimeDetailsModal({
 }) {
   if (!anime) return null;
 
-  console.log(anime); // Log para depuração
-
-  // Suporte a diferentes formatos de dados (userRating ou rating salvo no histórico)
+  // Suporte a diferentes formatos de dados
   const currentRating = anime.userRating ?? null;
   const animeCover = anime.image_url || anime.img || 'https://via.placeholder.com/220x310?text=Sem+Capa';
 
@@ -138,7 +136,7 @@ export default function AnimeDetailsModal({
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <StarIcon sx={{ color: '#ffb400', fontSize: 22 }} />
               <Typography variant="body1" sx={{ fontWeight: 700, color: '#fff' }}>
-                {anime.score || anime.rating || 'N/A'}
+                {anime.rating || 'N/A'}
               </Typography>
               <Typography variant="caption" sx={{ color: '#8b9bb4' }}>
                 (nota média no MyAnimeList)
