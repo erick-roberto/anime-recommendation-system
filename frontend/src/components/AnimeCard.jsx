@@ -63,7 +63,7 @@ export default function AnimeCard({ anime, isRanked = false, onClick }) {
       <CardMedia
         component="img"
         height="290"
-        image={anime.img || anime.image_url || 'https://via.placeholder.com/220x290?text=Sem+Capa'}
+        image={anime.image_url}
         alt={anime.name}
         sx={{ objectFit: 'cover' }}
       />

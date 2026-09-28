@@ -9,7 +9,7 @@ rating REAL,
 members INTEGER
 
 '''
-from sqlalchemy import Column, Integer, Text, REAL
+from sqlalchemy import Column, Integer, String, Text, REAL
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -25,5 +25,5 @@ class Anime(Base):
     episodes = Column("episodes", Text)
     rating = Column("rating", REAL)
     members = Column("members", Integer)
-    image_url = Column("image_url", Text, nullable=True) 
+    image_url = Column(String, nullable=True)
 

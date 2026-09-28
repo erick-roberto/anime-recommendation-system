@@ -24,7 +24,8 @@ def get_top_rated_animes(
             Anime.genre,
             Anime.type,
             Anime.rating.label("score"),
-            Anime.members
+            Anime.members,
+            Anime.image_url
         )
         .where(Anime.members > 10000, Anime.rating.isnot(None))
         .order_by(desc(Anime.rating))
@@ -48,7 +49,8 @@ def get_popular_animes(
             Anime.genre,
             Anime.type,
             Anime.rating.label("score"),
-            Anime.members
+            Anime.members,
+            Anime.image_url
         )
         .where(Anime.members.isnot(None))
         .order_by(desc(Anime.members))
@@ -71,7 +73,8 @@ def get_top_movies(
             Anime.genre,
             Anime.type,
             Anime.rating.label("score"),
-            Anime.members
+            Anime.members,
+            Anime.image_url
         )
         .where(Anime.type == "Movie")
         .order_by(desc(Anime.members))
@@ -93,7 +96,8 @@ def get_shonen_animes(
             Anime.genre,
             Anime.type,
             Anime.rating.label("score"),
-            Anime.members
+            Anime.members,
+            Anime.image_url
         )
         .where(
             Anime.genre.isnot(None),
