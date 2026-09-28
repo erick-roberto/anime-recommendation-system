@@ -8,7 +8,6 @@ class AnimeCardResponse(BaseModel):
     name: str
     genre: Optional[str] = None
     type: Optional[str] = None
-    score: Optional[float] = None
     members: Optional[int] = None
     image_url: Optional[str] = None
     rating: Optional[float] = None

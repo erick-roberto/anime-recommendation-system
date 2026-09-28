@@ -142,6 +142,7 @@ def recommend_users_based(
       Anime.type,
       Anime.rating,
       Anime.members,
+      Anime.image_url
   ).where(Anime.anime_id.in_(anime_ids))
   animes_db = session.execute(stmt_animes).all()
 
@@ -154,6 +155,7 @@ def recommend_users_based(
           'type': a.type,
           'score': a.rating,
           'members': a.members,
+          'image_url': a.image_url
       }
       for a in animes_db
   }

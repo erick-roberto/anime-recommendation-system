@@ -111,10 +111,9 @@ export default function Home({
           const formatted = (Array.isArray(data) ? data : []).map((item) => ({
             anime_id: item.anime_id,
             name: item.nome || item.name,
-            score: item.nota ?? item.score ?? item.rating,
             genre: item.genre || '',
             type: item.type || 'TV',
-            img: item.img || item.image_url,
+            image_url: item.img || item.image_url,
           }));
           setRecommendedAnimes(formatted);
         })

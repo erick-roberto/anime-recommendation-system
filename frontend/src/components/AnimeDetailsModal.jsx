@@ -29,8 +29,10 @@ export default function AnimeDetailsModal({
 }) {
   if (!anime) return null;
 
+  console.log(anime); // Log para depuração
+
   // Suporte a diferentes formatos de dados (userRating ou rating salvo no histórico)
-  const currentRating = anime.userRating ?? anime.rating ?? null;
+  const currentRating = anime.userRating ?? null;
   const animeCover = anime.image_url || anime.img || 'https://via.placeholder.com/220x310?text=Sem+Capa';
 
   const handleRatingChange = (event, newValue) => {
@@ -167,26 +169,6 @@ export default function AnimeDetailsModal({
               </Box>
             )}
 
-            {/* Sinopse (se fornecida pela API / scraper) */}
-            {anime.synopsis && (
-              <Box sx={{ mt: 0.5 }}>
-                <Typography variant="caption" sx={{ color: '#8b9bb4', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', mb: 0.5 }}>
-                  Sinopse
-                </Typography>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    color: '#c5c6c7',
-                    lineHeight: 1.6,
-                    maxHeight: 110,
-                    overflowY: 'auto',
-                    pr: 1,
-                  }}
-                >
-                  {anime.synopsis}
-                </Typography>
-              </Box>
-            )}
 
             {/* Área de Avaliação do Usuário */}
             <Box

@@ -15,11 +15,25 @@ export default function App() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [userHistory, setUserHistory] = useState([]);
   const [isInitializing, setIsInitializing] = useState(true);
+  
+  // Estados do Modal Central (usado pela busca da Navbar)
   const [selectedAnime, setSelectedAnime] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // 0. ABRIR MODAL COM A NOTA CORRETA DO USUÁRIO
   const handleOpenAnimeModal = (anime) => {
-    setSelectedAnime(anime);
+    // Procura no histórico se o usuário já avaliou esse anime
+    const historyItem = userHistory.find(
+      (item) => (item.anime_id || item.id) === (anime.anime_id || anime.id)
+    );
+
+    // Injeta a nota pessoal (userRating) para o modal não puxar a nota global (ex: 8.82)
+    const animeWithUserRating = {
+      ...anime,
+      userRating: historyItem ? (historyItem.userRating ?? historyItem.rating) : null,
+    };
+
+    setSelectedAnime(animeWithUserRating);
     setIsModalOpen(true);
   };
 
@@ -127,13 +141,6 @@ export default function App() {
     setCurrentView('home');
   };
 
-  // Recupera a nota que o usuário já deu para o anime selecionado (se houver)
-  const currentSelectedRating = selectedAnime
-    ? userHistory.find(
-        (item) => (item.anime_id || item.id) === (selectedAnime.anime_id || selectedAnime.id)
-      )?.rating || 0
-    : 0;
-
   if (isInitializing) {
     return (
       <ThemeProvider theme={theme}>
@@ -153,21 +160,23 @@ export default function App() {
         user={user}
         onHomeClick={() => setCurrentView('home')}
         onProfileClick={() => setCurrentView('profile')}
-        onLoginClick={() => setIsAuthOpen(true)} // <-- 2. Corrigido de setIsAuthModalOpen para setIsAuthOpen
+        onLoginClick={() => setIsAuthOpen(true)}
         onLogoutClick={handleLogout}
-        onSelectAnime={handleOpenAnimeModal}
+        onSelectAnime={handleOpenAnimeModal} // <-- Ao clicar na busca, abre o modal
       />
 
-      {/* Modal acionado pela busca da Navbar ou cliques nos cards */}
-      {selectedAnime && (
-        <AnimeDetailsModal
-          open={isModalOpen}
-          anime={selectedAnime}
-          currentRating={currentSelectedRating}
-          onClose={() => setIsModalOpen(false)}
-          onRate={(id, score) => handleUpdateRating(selectedAnime, score)}
-        />
-      )}
+      {/* Modal Central (Acionado pela busca da Navbar) */}
+      <AnimeDetailsModal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        anime={selectedAnime}
+        isLoggedIn={isLoggedIn} // <-- Passando o status de login para liberar as estrelas!
+        onRate={(animeTarget, score) => {
+          handleUpdateRating(animeTarget, score);
+          // Atualiza as estrelinhas do modal instantaneamente sem precisar fechar e abrir
+          setSelectedAnime((prev) => prev ? { ...prev, userRating: score } : null);
+        }}
+      />
 
       <Container maxWidth="100%" sx={{ mt: 4, mb: 4 }}>
         {currentView === 'home' ? (

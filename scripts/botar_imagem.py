@@ -124,4 +124,4 @@ def resgatar_capas(batch_limit=500):
         session.close()
 
 if __name__ == "__main__":
-    resgatar_capas(batch_limit=1000)
+    resgatar_capas(batch_limit=5000)

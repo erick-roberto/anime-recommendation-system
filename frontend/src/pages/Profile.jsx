@@ -42,9 +42,6 @@ export default function Profile({
     (item?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  console.log('Profile.jsx - user:', user);
-  console.log('Profile.jsx - history:', history);
-
   // Média defensiva (apenas números válidos entre 0 e 10)
   const averageRating =
     history.length > 0
