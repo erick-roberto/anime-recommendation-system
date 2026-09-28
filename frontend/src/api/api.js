@@ -120,4 +120,5 @@ export const animeService = {
   getShonen: () => request('/recomendacoes/shonen'), // <-- Adicione esta linha
   getRecomendados: (userId) => request(`/recomendacoes/${userId}`),
   searchAnimes: (query) => request(`/users/me/ratings/search?q=${encodeURIComponent(query)}`),
+  getPearsonRecommendations: (userId) => request(`/recomendacoes/pearson/${userId}`),
 };

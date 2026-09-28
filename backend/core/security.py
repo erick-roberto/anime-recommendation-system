@@ -1,1 +1,0 @@
-# Hashes de senha e verificação

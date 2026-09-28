@@ -1,12 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { ThemeProvider, CssBaseline, Container, Box, CircularProgress } from '@mui/material';
 import NavBar from './components/NavBar';
 import Home from './pages/Home';
-import Profile from './pages/Profile';
-import AuthModal from './components/AuthModal';
 import theme from './theme';
 import { authService, userService } from './api/api';
-import AnimeDetailsModal from './components/AnimeDetailsModal';
+
+// Lazy loading das páginas e modais pesados
+const Profile = lazy(() => import('./pages/Profile'));
+const AuthModal = lazy(() => import('./components/AuthModal'));
+const AnimeDetailsModal = lazy(() => import('./components/AnimeDetailsModal'));
+
+// Fallback de carregamento para Suspense
+const LazyFallback = () => (
+  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+    <CircularProgress color="secondary" size={40} />
+  </Box>
+);
 
 export default function App() {
   const [currentView, setCurrentView] = useState('home');
@@ -162,21 +171,22 @@ export default function App() {
         onProfileClick={() => setCurrentView('profile')}
         onLoginClick={() => setIsAuthOpen(true)}
         onLogoutClick={handleLogout}
-        onSelectAnime={handleOpenAnimeModal} // <-- Ao clicar na busca, abre o modal
+        onSelectAnime={handleOpenAnimeModal}
       />
 
-      {/* Modal Central (Acionado pela busca da Navbar) */}
-      <AnimeDetailsModal
-        open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        anime={selectedAnime}
-        isLoggedIn={isLoggedIn} // <-- Passando o status de login para liberar as estrelas!
-        onRate={(animeTarget, score) => {
-          handleUpdateRating(animeTarget, score);
-          // Atualiza as estrelinhas do modal instantaneamente sem precisar fechar e abrir
-          setSelectedAnime((prev) => prev ? { ...prev, userRating: score } : null);
-        }}
-      />
+      {/* Modal Central (Lazy loaded) */}
+      <Suspense fallback={<LazyFallback />}>
+        <AnimeDetailsModal
+          open={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          anime={selectedAnime}
+          isLoggedIn={isLoggedIn}
+          onRate={(animeTarget, score) => {
+            handleUpdateRating(animeTarget, score);
+            setSelectedAnime((prev) => prev ? { ...prev, userRating: score } : null);
+          }}
+        />
+      </Suspense>
 
       <Container maxWidth="100%" sx={{ mt: 4, mb: 4 }}>
         {currentView === 'home' ? (
@@ -189,19 +199,23 @@ export default function App() {
             }}
           />
         ) : (
-          <Profile
-            user={user}
-            history={userHistory}
-            onUpdateRating={handleUpdateRating}
-            onRemoveRating={handleRemoveRating}
-          />
+          <Suspense fallback={<LazyFallback />}>
+            <Profile
+              user={user}
+              history={userHistory}
+              onUpdateRating={handleUpdateRating}
+              onRemoveRating={handleRemoveRating}
+            />
+          </Suspense>
         )}
 
-        <AuthModal
-          open={isAuthOpen}
-          onClose={() => setIsAuthOpen(false)}
-          onLoginSuccess={handleLoginSuccess}
-        />
+        <Suspense fallback={<LazyFallback />}>
+          <AuthModal
+            open={isAuthOpen}
+            onClose={() => setIsAuthOpen(false)}
+            onLoginSuccess={handleLoginSuccess}
+          />
+        </Suspense>
       </Container>
     </ThemeProvider>
   );

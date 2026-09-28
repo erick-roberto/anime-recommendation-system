@@ -29,8 +29,11 @@ export default function AnimeDetailsModal({
 }) {
   if (!anime) return null;
 
-  // Suporte a diferentes formatos de dados
-  const currentRating = anime.userRating ?? null;
+  // userRating = nota PESSOAL do usuário (vem do userHistory via getAnimeWithRating)
+  // rating = nota da COMUNIDADE (MyAnimeList) - vem do backend
+  // NÃO fazer fallback para rating da comunidade
+  const currentUserRating = anime.userRating ?? null;
+  const communityRating = anime.rating ?? null;
   const animeCover = anime.image_url || anime.img || 'https://via.placeholder.com/220x310?text=Sem+Capa';
 
   const handleRatingChange = (event, newValue) => {
@@ -185,15 +188,15 @@ export default function AnimeDetailsModal({
                 <Typography variant="subtitle2" sx={{ color: '#8b9bb4', fontWeight: 600 }}>
                   Sua Avaliação
                 </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 800, color: currentRating ? '#00e5ff' : '#666' }}>
-                  {currentRating ? `${currentRating} / 10` : (isLoggedIn ? 'Selecione uma nota' : 'Faça login para avaliar')}
+                <Typography variant="body2" sx={{ fontWeight: 800, color: currentUserRating ? '#00e5ff' : '#666' }}>
+                  {currentUserRating ? `${currentUserRating} / 10` : (isLoggedIn ? 'Selecione uma nota' : 'Faça login para avaliar')}
                 </Typography>
               </Box>
 
               <Rating
                 max={10}
                 precision={0.5}
-                value={Number(currentRating) || 0}
+                value={Number(currentUserRating) || 0}
                 readOnly={!isLoggedIn}
                 onChange={handleRatingChange}
                 emptyIcon={<StarIcon style={{ opacity: 0.2, color: '#fff' }} fontSize="inherit" />}

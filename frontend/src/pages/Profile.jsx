@@ -201,7 +201,7 @@ export default function Profile({
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <Box
                           component="img"
-                          src={item.img || item.image_url || 'https://via.placeholder.com/40x55?text=No+Img'}
+                          src={item.image_url}
                           alt={item.name || 'Anime'}
                           sx={{ width: 40, height: 55, objectFit: 'cover', borderRadius: 1 }}
                         />

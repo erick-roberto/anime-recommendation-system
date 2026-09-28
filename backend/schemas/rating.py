@@ -12,6 +12,7 @@ class UserRatedAnimeResponse(BaseModel):
     genre: Optional[str] = None
     type: Optional[str] = None
     userRating: float
+    image_url: Optional[str] = None
 
     class Config:
         from_attributes = True

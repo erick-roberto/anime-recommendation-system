@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useMemo } from 'react';
 import {
   Card,
   CardMedia,
@@ -11,15 +11,21 @@ import {
 } from '@mui/material';
 import StarIcon from '@mui/icons-material/Star';
 
-export default function AnimeCard({ anime, isRanked = false, onClick }) {
-  // Suporta Array ou String separada por vírgula (até 3 itens)
-  const genresList = Array.isArray(anime.genre)
-    ? anime.genre.slice(0, 3)
-    : anime.genre
-    ? anime.genre.split(',').map((g) => g.trim()).slice(0, 3)
-    : [];
+const AnimeCard = memo(function AnimeCard({ anime, isRanked = false, onClick }) {
+  // Suporta Array ou String separada por vírgula (até 3 itens) - memoizado
+  const genresList = useMemo(() => {
+    if (Array.isArray(anime.genre)) return anime.genre.slice(0, 3);
+    if (anime.genre) return anime.genre.split(',').map((g) => g.trim()).slice(0, 3);
+    return [];
+  }, [anime.genre]);
 
-  const currentUserRating = anime.userRating ?? anime.rating ?? null;
+  // userRating = nota PESSOAL do usuário (vem do userHistory via getAnimeWithRating)
+  // rating = nota da COMUNIDADE (MyAnimeList) - vem do backend
+  // NÃO fazer fallback: se userRating não existe, usuário não avaliou
+  const currentUserRating = useMemo(
+    () => anime.userRating ?? null,
+    [anime.userRating]
+  );
 
   return (
     <Card
@@ -135,4 +141,6 @@ export default function AnimeCard({ anime, isRanked = false, onClick }) {
       </CardActions>
     </Card>
   );
-}
+});
+
+export default AnimeCard;

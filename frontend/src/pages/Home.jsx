@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { memo, useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Container,
   Typography,
@@ -16,8 +16,8 @@ import AnimeCard from '../components/AnimeCard';
 import AnimeDetailsModal from '../components/AnimeDetailsModal';
 import { animeService } from '../api/api';
 
-// Componente Reutilizável de Título de Seção
-function SectionHeader({ icon, title, subtitle, badgeText }) {
+// Componente Reutilizável de Título de Seção - memoizado
+const SectionHeader = memo(function SectionHeader({ icon, title, subtitle, badgeText }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, mt: 4 }}>
       {icon}
@@ -36,10 +36,10 @@ function SectionHeader({ icon, title, subtitle, badgeText }) {
       </Box>
     </Box>
   );
-}
+});
 
-// Fileira Horizontal com Rolagem Suave
-function HorizontalRow({ children }) {
+// Fileira Horizontal com Rolagem Suave - memoizada
+const HorizontalRow = memo(function HorizontalRow({ children }) {
   return (
     <Box
       sx={{
@@ -55,7 +55,7 @@ function HorizontalRow({ children }) {
       {children}
     </Box>
   );
-}
+});
 
 export default function Home({
   isLoggedIn = false,
@@ -73,6 +73,7 @@ export default function Home({
   const [shonenAnimes, setShonenAnimes] = useState([]);
   const [movieAnimes, setMovieAnimes] = useState([]);
   const [recommendedAnimes, setRecommendedAnimes] = useState([]);
+  const [pearsonAnimes, setPearsonAnimes] = useState([]);
 
   // 1. Carrega todas as seções públicas simultaneamente
   const loadPublicSections = useCallback(async () => {
@@ -105,26 +106,39 @@ export default function Home({
     const userId = user?.user_id || user?.id;
 
     if (isLoggedIn && userId && userHistory.length >= 5) {
-      animeService
-        .getRecomendados(userId)
-        .then((data) => {
-          const formatted = (Array.isArray(data) ? data : []).map((item) => ({
+      // Promise.all dispara as duas requisições ao mesmo tempo
+      Promise.all([
+        animeService.getRecomendados(userId).catch(() => []),
+        animeService.getPearsonRecommendations(userId).catch(() => [])
+      ])
+        .then(([cossenoData, pearsonData]) => {
+          // Função auxiliar para formatar os dados e evitar repetição de código
+          const formatData = (data) => (Array.isArray(data) ? data : []).map((item) => ({
             anime_id: item.anime_id,
             name: item.nome || item.name,
             genre: item.genre || '',
             type: item.type || 'TV',
-            image_url: item.img || item.image_url,
+            rating: item.score ?? item.rating ?? null,
+            members: item.members ?? null,
+            image_url: item.image_url,
           }));
-          setRecommendedAnimes(formatted);
+
+          setRecommendedAnimes(formatData(cossenoData));
+          setPearsonAnimes(formatData(pearsonData));
         })
-        .catch(() => setRecommendedAnimes([]));
+        .catch((err) => {
+          console.error('Erro ao carregar recomendações:', err);
+          setRecommendedAnimes([]);
+          setPearsonAnimes([]);
+        });
     } else {
       setRecommendedAnimes([]);
+      setPearsonAnimes([]);
     }
   }, [isLoggedIn, user, userHistory.length]);
 
-  // Mapeia a nota dada pelo usuário para dentro do card
-  const getAnimeWithRating = (anime) => {
+  // Mapeia a nota dada pelo usuário para dentro do card - MEMOIZADO
+  const getAnimeWithRating = useCallback((anime) => {
     if (!anime) return null;
     const animeId = anime.anime_id || anime.id;
 
@@ -137,7 +151,13 @@ export default function Home({
       ...anime,
       userRating: historyItem ? (historyItem.userRating ?? historyItem.rating) : null,
     };
-  };
+  }, [userHistory]);
+
+  // Versão memoizada para usar no render (evita criar nova função a cada render)
+  const getAnimeWithRatingMemo = useMemo(
+    () => getAnimeWithRating,
+    [getAnimeWithRating]
+  );
 
   const handleOpenDetails = (anime) => {
     setSelectedAnime(anime);
@@ -184,7 +204,7 @@ export default function Home({
             {popularAnimes.slice(0, 8).map((anime) => (
               <AnimeCard
                 key={anime.anime_id}
-                anime={getAnimeWithRating(anime)}
+                anime={getAnimeWithRatingMemo(anime)}
                 onClick={() => handleOpenDetails(anime)}
               />
             ))}
@@ -205,7 +225,28 @@ export default function Home({
             {recommendedAnimes.map((anime) => (
               <AnimeCard
                 key={anime.anime_id}
-                anime={getAnimeWithRating(anime)}
+                anime={getAnimeWithRatingMemo(anime)}
+                onClick={() => handleOpenDetails(anime)}
+              />
+            ))}
+          </HorizontalRow>
+        </>
+      )}
+
+      {/* SEÇÃO 1.5: RECOMENDADOS (KNN - PEARSON) */}
+      {isLoggedIn && pearsonAnimes.length > 0 && (
+        <>
+          <SectionHeader
+            icon={<AutoAwesomeIcon sx={{ color: '#ff4081', fontSize: 30 }} />} // Cor rosa para diferenciar
+            title="Gostos Refinados"
+            badgeText="Pearson Ativo"
+            subtitle="Recomendações com alta precisão usando correlação de Pearson"
+          />
+          <HorizontalRow>
+            {pearsonAnimes.map((anime) => (
+              <AnimeCard
+                key={`pea-${anime.anime_id}`}
+                anime={getAnimeWithRatingMemo(anime)}
                 onClick={() => handleOpenDetails(anime)}
               />
             ))}
@@ -223,7 +264,7 @@ export default function Home({
         {topRatedAnimes.map((anime, index) => (
           <AnimeCard
             key={anime.anime_id}
-            anime={{ ...getAnimeWithRating(anime), rank: index + 1 }}
+            anime={{ ...getAnimeWithRatingMemo(anime), rank: index + 1 }}
             isRanked
             onClick={() => handleOpenDetails(anime)}
           />
@@ -240,7 +281,7 @@ export default function Home({
         {popularAnimes.map((anime) => (
           <AnimeCard
             key={anime.anime_id}
-            anime={getAnimeWithRating(anime)}
+            anime={getAnimeWithRatingMemo(anime)}
             onClick={() => handleOpenDetails(anime)}
           />
         ))}
@@ -256,7 +297,7 @@ export default function Home({
         {shonenAnimes.map((anime) => (
           <AnimeCard
             key={anime.anime_id}
-            anime={getAnimeWithRating(anime)}
+            anime={getAnimeWithRatingMemo(anime)}
             onClick={() => handleOpenDetails(anime)}
           />
         ))}
@@ -272,7 +313,7 @@ export default function Home({
         {movieAnimes.map((anime) => (
           <AnimeCard
             key={anime.anime_id}
-            anime={getAnimeWithRating(anime)}
+            anime={getAnimeWithRatingMemo(anime)}
             onClick={() => handleOpenDetails(anime)}
           />
         ))}
@@ -283,7 +324,7 @@ export default function Home({
         open={isModalOpen}
         onClose={handleCloseModal}
         // Passa sempre o anime re-calculado com base no userHistory atual
-        anime={getAnimeWithRating(selectedAnime)}
+        anime={getAnimeWithRatingMemo(selectedAnime)}
         onRate={(animeTarget, newRating) => {
           const targetId = animeTarget.anime_id || animeTarget.id;
           if (onRateAnime) {

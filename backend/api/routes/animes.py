@@ -1,8 +1,8 @@
 # backend/api/routes/ratings.py
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Query, Session
-from sqlalchemy import select, desc
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from sqlalchemy.orm import Session
+from sqlalchemy import select, func
 
 from backend.db.session import get_db
 from backend.models.user import User
@@ -11,6 +11,7 @@ from backend.models.anime import Anime
 from backend.schemas.anime import AnimeCardResponse
 from backend.schemas.rating import RatingCreate, UserRatedAnimeResponse
 from backend.api.dependencies import get_current_user
+from backend.services.fast_recommender import atualizar_similaridades_fast
 
 router = APIRouter(prefix="/users/me/ratings", tags=["User Ratings"])
 
@@ -68,6 +69,7 @@ def get_user_ratings(
 def upsert_user_rating(
     anime_id: int,
     rating_in: RatingCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -101,10 +103,25 @@ def upsert_user_rating(
 
     db.commit()
 
+    # DISPARA ATUALIZAÇÃO DE SIMILARIDADES EM SEGUNDO PLANO (opcional)
+    total_avaliacoes = db.scalar(
+        select(func.count(Rating.anime_id))
+        .where(Rating.user_id == current_user.user_id, Rating.rating != -1)
+    )
+    
+    atualizacao_agendada = False
+    if total_avaliacoes >= 5 and total_avaliacoes % 10 == 0:
+        background_tasks.add_task(
+            atualizar_similaridades_fast, 
+            usuario_alvo_id=current_user.user_id
+        )
+        atualizacao_agendada = True
+
     return {
         "message": "Avaliação salva com sucesso",
         "anime_id": anime_id,
-        "rating": rating_in.rating
+        "rating": rating_in.rating,
+        "atualizacao_agendada": atualizacao_agendada
     }
 
 

@@ -23,7 +23,7 @@ def get_top_rated_animes(
             Anime.name,
             Anime.genre,
             Anime.type,
-            Anime.rating.label("score"),
+            Anime.rating,
             Anime.members,
             Anime.image_url
         )
@@ -48,7 +48,7 @@ def get_popular_animes(
             Anime.name,
             Anime.genre,
             Anime.type,
-            Anime.rating.label("score"),
+            Anime.rating,
             Anime.members,
             Anime.image_url
         )
@@ -72,7 +72,7 @@ def get_top_movies(
             Anime.name,
             Anime.genre,
             Anime.type,
-            Anime.rating.label("score"),
+            Anime.rating,
             Anime.members,
             Anime.image_url
         )
@@ -95,7 +95,7 @@ def get_shonen_animes(
             Anime.name,
             Anime.genre,
             Anime.type,
-            Anime.rating.label("score"),
+            Anime.rating,
             Anime.members,
             Anime.image_url
         )
