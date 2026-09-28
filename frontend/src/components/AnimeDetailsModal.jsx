@@ -1,37 +1,35 @@
+// src/components/AnimeDetailsModal.jsx
 import React from 'react';
 import {
   Dialog,
+  DialogTitle,
   DialogContent,
   DialogActions,
   Typography,
   Box,
-  Chip,
-  Button,
   Rating,
-  Divider,
-  IconButton,
+  Button,
+  Chip,
 } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
 import StarIcon from '@mui/icons-material/Star';
-import TvIcon from '@mui/icons-material/Tv';
-import MovieIcon from '@mui/icons-material/Movie';
-import GroupIcon from '@mui/icons-material/Group';
-import MovieFilterIcon from '@mui/icons-material/MovieFilter';
 
-export default function AnimeDetailsModal({ open, onClose, anime, onRate, isLoggedIn }) {
+export default function AnimeDetailsModal({
+  open,
+  onClose,
+  anime,
+  onRate,
+  isLoggedIn,
+}) {
   if (!anime) return null;
 
-  // Processa todos os gêneros (sem limite de 3)
-  const genresList = Array.isArray(anime.genre)
-    ? anime.genre
-    : anime.genre
-      ? anime.genre.split(',').map((g) => g.trim())
-      : [];
+  const currentRating = anime.userRating ?? null;
 
-  // Formata o número de membros (Ex: 1250000 -> 1.250.000)
-  const formattedMembers = anime.members
-    ? anime.members.toLocaleString('pt-BR')
-    : 'N/A';
+  const handleRatingChange = (event, newValue) => {
+    if (!isLoggedIn || newValue === null) return;
+    if (onRate) {
+      onRate(anime, newValue);
+    }
+  };
 
   return (
     <Dialog
@@ -43,120 +41,74 @@ export default function AnimeDetailsModal({ open, onClose, anime, onRate, isLogg
         sx: {
           backgroundColor: '#1f2833',
           color: '#fff',
-          borderRadius: 2,
+          borderRadius: 3,
         },
       }}
     >
-      {/* Botão de Fechar no canto superior direito */}
-      <IconButton
-        onClick={onClose}
-        sx={{ position: 'absolute', right: 8, top: 8, color: '#aaa' }}
-      >
-        <CloseIcon />
-      </IconButton>
+      <DialogTitle sx={{ fontWeight: 'bold', fontSize: '1.4rem' }}>
+        {anime.name}
+      </DialogTitle>
 
-      <DialogContent sx={{ pt: 3 }}>
-        <Box sx={{ display: 'flex', gap: 3, flexDirection: { xs: 'column', sm: 'row' } }}>
-          {/* Imagem do Anime */}
-          <Box
-            component="img"
-            src={anime.img || anime.image_url || 'https://via.placeholder.com/200x280?text=Sem+Capa'}
-            alt={anime.name}
-            sx={{
-              width: { xs: '100%', sm: 180 },
-              height: 250,
-              objectFit: 'cover',
-              borderRadius: 1.5,
-            }}
-          />
-
-          {/* Informações do Anime */}
-          <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 1, color: '#fff' }}>
-              {anime.name}
-            </Typography>
-
-            {/* Média da Comunidade */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <StarIcon sx={{ color: '#ffb400' }} />
-              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                {anime.score || anime.rating || 'N/A'}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                / 10 (MyAnimeList)
-              </Typography>
-            </Box>
-
-            {/* Chips de Informações Principais */}
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+      <DialogContent dividers sx={{ borderColor: '#333' }}>
+        {/* Informações básicas: Gênero, Tipo, Média da comunidade */}
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+          {anime.genre &&
+            anime.genre.split(',').map((g, idx) => (
               <Chip
-                icon={<TvIcon sx={{ fontSize: '1rem !important', color: '#00e5ff' }} />}
-                label={anime.type || 'TV'}
+                key={idx}
+                label={g.trim()}
                 size="small"
-                sx={{ bgcolor: '#0b0c10', color: '#fff' }}
+                sx={{ bgcolor: '#0b0c10', color: '#00e5ff', border: '1px solid #333' }}
               />
-              <Chip
-                icon={<MovieFilterIcon sx={{ fontSize: '1rem !important', color: '#7c4dff' }} />}
-                label={`${anime.episodes || '?'} ep(s)`}
-                size="small"
-                sx={{ bgcolor: '#0b0c10', color: '#fff' }}
-              />
-              <Chip
-                icon={<GroupIcon sx={{ fontSize: '1rem !important', color: '#ff5252' }} />}
-                label={`${formattedMembers} membros`}
-                size="small"
-                sx={{ bgcolor: '#0b0c10', color: '#fff' }}
-              />
-            </Box>
-
-            <Divider sx={{ my: 1.5, borderColor: '#333' }} />
-
-            {/* Lista Completa de Gêneros */}
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-              Gêneros:
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-              {genresList.map((genre, idx) => (
-                <Chip
-                  key={idx}
-                  label={genre}
-                  size="small"
-                  sx={{
-                    bgcolor: '#0b0c10',
-                    color: '#00e5ff',
-                    border: '1px solid #333',
-                    fontSize: '0.75rem',
-                  }}
-                />
-              ))}
-            </Box>
-          </Box>
+            ))}
         </Box>
 
-        <Divider sx={{ my: 2.5, borderColor: '#333' }} />
-
-        {/* Campo para o usuário dar a nota no Modal */}
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="subtitle2" sx={{ color: isLoggedIn ? '#00e5ff' : '#aaa' }}>
-            {/* 2. Muda o texto se não estiver logado */}
-            {isLoggedIn ? 'Sua Avaliação para este Anime:' : 'Faça login para poder avaliar'}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+          <StarIcon sx={{ color: '#ffb400', fontSize: 20 }} />
+          <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+            Média da Comunidade: {anime.score || anime.rating || 'N/A'}
           </Typography>
+        </Box>
+
+        {/* Avaliação do Usuário (Escala 0 a 10) */}
+        <Box
+          sx={{
+            p: 2,
+            bgcolor: '#0b0c10',
+            borderRadius: 2,
+            border: '1px solid #333',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1,
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="subtitle2" sx={{ color: '#aaa' }}>
+              Sua Avaliação:
+            </Typography>
+            <Typography variant="body2" sx={{ fontWeight: 'bold', color: currentRating ? '#00e5ff' : '#666' }}>
+              {currentRating ? `${currentRating} / 10` : (isLoggedIn ? 'Toque nas estrelas para avaliar' : 'Faça login para avaliar')}
+            </Typography>
+          </Box>
 
           <Rating
             max={10}
-            size="medium"
-            precision={1}
-            value={anime.userRating || null}
-            readOnly={!isLoggedIn} // <-- 3. BLOQUEIA O CLIQUE SE FOR FALSE!
-            onChange={(e, val) => {
-              if (onRate) onRate(anime, val);
+            precision={0.5}
+            value={Number(currentRating) || 0}
+            readOnly={!isLoggedIn}
+            onChange={handleRatingChange}
+            sx={{
+              fontSize: '1.8rem',
+              '& .MuiRating-iconEmpty': {
+                color: '#333e48',
+              },
             }}
           />
         </Box>
       </DialogContent>
 
-      <DialogActions sx={{ p: 2, pt: 0 }}>
-        <Button onClick={onClose} variant="outlined" color="inherit">
+      <DialogActions sx={{ p: 2 }}>
+        <Button onClick={onClose} sx={{ color: '#aaa', '&:hover': { color: '#fff' } }}>
           Fechar
         </Button>
       </DialogActions>

@@ -7,7 +7,7 @@ import AuthModal from './components/AuthModal';
 import theme from './theme';
 
 // Importa os serviços reais
-import { authService, userService } from './api/auth_api'
+import { authService, userService } from './api/api'
 
 export default function App() {
   const [currentView, setCurrentView] = useState('home');
@@ -63,19 +63,50 @@ export default function App() {
   };
 
   // 3. ATUALIZAR NOTA (sincroniza com o backend)
-  const handleUpdateRating = async (animeId, newRating) => {
-    setUserHistory((prev) =>
-      prev.map((item) =>
-        item.anime_id === animeId ? { ...item, userRating: newRating } : item
-      )
+  const handleUpdateRating = async (animeTarget, newRating) => {
+  // 1. Descobre se veio o objeto completo ou apenas o ID
+  const isObject = typeof animeTarget === 'object' && animeTarget !== null;
+  const animeId = isObject ? (animeTarget.anime_id || animeTarget.id) : animeTarget;
+  const animeData = isObject ? animeTarget : {};
+
+  // 2. Atualiza o estado preservando ou adicionando os metadados
+  setUserHistory((prev) => {
+    const existingIndex = prev.findIndex(
+      (item) => (item.anime_id || item.id) === animeId
     );
 
-    try {
-      await userService.upsertRating(animeId, newRating);
-    } catch (err) {
-      console.error('Erro ao atualizar nota:', err);
+    if (existingIndex >= 0) {
+      // Se já existia, atualiza apenas as notas mantendo name, genre, etc.
+      return prev.map((item, idx) =>
+        idx === existingIndex
+          ? { ...item, userRating: newRating, rating: newRating }
+          : item
+      );
+    } else {
+      // SE FOR NOVO: injeta os dados visuais completos vindos do Card/Modal!
+      return [
+        ...prev,
+        {
+          ...animeData, // <-- Garante name, genre, type, img, etc.
+          anime_id: animeId,
+          name: animeData.name || animeData.nome || `Anime #${animeId}`,
+          genre: animeData.genre || '',
+          type: animeData.type || 'TV',
+          img: animeData.img || animeData.image_url || '',
+          userRating: newRating,
+          rating: newRating,
+        },
+      ];
     }
-  };
+  });
+
+  // 3. Persiste no banco de dados via API
+  try {
+    await userService.upsertRating(animeId, newRating);
+  } catch (err) {
+    console.error('Erro ao salvar avaliação no backend:', err);
+  }
+};
 
   // 4. REMOVER NOTA (sincroniza com o backend)
   const handleRemoveRating = async (animeId) => {
@@ -125,6 +156,7 @@ export default function App() {
         {currentView === 'home' ? (
           <Home
             isLoggedIn={isLoggedIn}
+            user={user}
             userHistory={userHistory}
             onRateAnime={(anime, rating) => {
               const animeId = anime.anime_id || anime.id;

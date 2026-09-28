@@ -116,3 +116,4 @@ def delete_user_rating(
     db.commit()
 
     return {"message": "Avaliação removida com sucesso"}
+

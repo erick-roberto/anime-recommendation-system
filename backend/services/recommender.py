@@ -82,83 +82,85 @@ def vizinhos_mais_proximos(usuario_alvo, matriz_esparsa, user_to_index, user_ind
     return mais_proximos[:top_k]
 
 
-# recomender baseado em usuário
-def recommend_users_based(usuario_alvo: int, session: Session):
+# 4. RECOMENDADOR BASEADO EM USUÁRIO (Atualizado com campos visuais e limite top_n)
+def recommend_users_based(
+    usuario_alvo: int, session: Session, top_n: int = 15
+):
+  # Consulta dos vizinhos mais próximos do usuário alvo
+  stmt_similares = select(
+      UserSimilarity.usuario_2, UserSimilarity.similaridade
+  ).where(UserSimilarity.usuario_1 == usuario_alvo)
+  similares = session.execute(stmt_similares).all()
 
-    # consulta dos vizinhos mais próximos do usuário alvo
-    stmt_similares = (select(UserSimilarity.usuario_2, UserSimilarity.similaridade).where(UserSimilarity.usuario_1 == usuario_alvo))
-    similares = session.execute(stmt_similares).all()
+  if not similares:
+    return []
 
-    # caso a query n retorne registros
-    if not similares:
-        return []
+  similaridades = {usuario_2: float(sim) for usuario_2, sim in similares}
+  ids_vizinhos = list(similaridades.keys())
 
-    # transforma os registros em um dicionário
-    similaridades = {usuario_2: float(similaridade) for usuario_2, similaridade in similares}
+  # Animes que o usuário alvo já assistiu/avaliou
+  stmt_animes_usuario = select(Rating.anime_id).where(
+      Rating.user_id == usuario_alvo, Rating.rating != -1
+  )
+  animes_usuario = set(session.execute(stmt_animes_usuario).scalars().all())
 
-    # separa apenas os IDs dentro de uma lista
-    ids_vizinhos = list(similaridades.keys())
+  # Avaliações dos vizinhos
+  stmt_ratings = select(
+      Rating.user_id, Rating.anime_id, Rating.rating
+  ).where(Rating.user_id.in_(ids_vizinhos), Rating.rating != -1)
+  ratings_vizinhos = session.execute(stmt_ratings).all()
 
-    # busca os IDs dos animes avaliados pelo usuário alvo
-    stmt_animes_usuario = (select(Rating.anime_id).where(Rating.user_id == usuario_alvo, Rating.rating != -1))
-    animes_usuario = set(session.execute(stmt_animes_usuario).scalars().all())
+  recomendacoes = {}
 
-    # busca  as avaliações dos vizinhos
-    stmt_ratings = (select(Rating.user_id, Rating.anime_id, Rating.rating).where(Rating.user_id.in_(ids_vizinhos), Rating.rating != -1))
-    ratings_vizinhos = session.execute(stmt_ratings).all()
+  for user_id, anime_id, rating in ratings_vizinhos:
+    if anime_id in animes_usuario:
+      continue
 
-    recomendacoes = {}
+    similaridade = similaridades[user_id]
+    score = float(rating) * similaridade
 
+    if anime_id not in recomendacoes:
+      recomendacoes[anime_id] = 0.0
 
-    for user_id, anime_id, rating in ratings_vizinhos:
+    recomendacoes[anime_id] += score
 
-        if anime_id in animes_usuario:
-            continue
+  if not recomendacoes:
+    return []
 
-        # similaridade de um dos vizinhos mais próximos
-        similaridade = similaridades[user_id]
+  # Ordena decrescente e limita aos top_n primeiros
+  recomendacoes_ordenadas = sorted(
+      recomendacoes.items(), key=lambda x: x[1], reverse=True
+  )[:top_n]
 
-        # score: leva em consideração a nota que ele deu
-        score = float(rating) * similaridade
+  anime_ids = [anime_id for anime_id, _ in recomendacoes_ordenadas]
 
-        # adiciona o anime as recomendações, caso não esteja ainda
-        if anime_id not in recomendacoes:
-            recomendacoes[anime_id] = 0.0 
+  # Busca os dados completos para renderizar no AnimeCard
+  stmt_animes = select(
+      Anime.anime_id,
+      Anime.name,
+      Anime.genre,
+      Anime.type,
+      Anime.rating,
+      Anime.members,
+  ).where(Anime.anime_id.in_(anime_ids))
+  animes_db = session.execute(stmt_animes).all()
 
-        # acumula essas notas
-        recomendacoes[anime_id] += score
+  # Mapeia por ID para preservar o ranking gerado pelo KNN
+  animes_dict = {
+      a.anime_id: {
+          'anime_id': a.anime_id,
+          'name': a.name,
+          'genre': a.genre,
+          'type': a.type,
+          'score': a.rating,
+          'members': a.members,
+      }
+      for a in animes_db
+  }
 
+  resultado = []
+  for anime_id, _ in recomendacoes_ordenadas:
+    if anime_id in animes_dict:
+      resultado.append(animes_dict[anime_id])
 
-    # ordena as reomendações (decrescente)
-    recomendacoes_ordenadas = sorted(
-        recomendacoes.items(),
-        key=lambda x: x[1],
-        reverse=True
-    )   
-
-    # monta o JSON final 
-    anime_ids = [anime_id for anime_id, score in recomendacoes_ordenadas] 
-
-    # verifica se existe anime
-    if not anime_ids:
-        return []
-
-    # busca os dados dos animes
-    stmt_animes = (select(Anime.anime_id, Anime.name).where(Anime.anime_id.in_(anime_ids)))
-    animes = session.execute(stmt_animes).all()
-
-    # criação de um dicionário que possui os IDs e nomes
-    nomes_animes = {anime_id: nome for anime_id, nome in animes}
-
-    resultado = []
-
-    for anime_id, score in recomendacoes_ordenadas:
-
-        resultado.append({
-            "anime_id": anime_id,
-            "nome": nomes_animes.get(anime_id),
-            "nota": round(score, 4)
-        })
-
-    return resultado
-
+  return resultado

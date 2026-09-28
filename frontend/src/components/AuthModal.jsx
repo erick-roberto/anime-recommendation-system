@@ -8,7 +8,7 @@ import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 
-import { authService } from '../api/auth_api';
+import { authService } from '../api/api';
 
 export default function AuthModal({ open, onClose, onLoginSuccess }) {
   const [tabIndex, setTabIndex] = useState(0); // 0 = Entrar, 1 = Criar Conta
@@ -165,7 +165,7 @@ export default function AuthModal({ open, onClose, onLoginSuccess }) {
             disabled={loading}
             value={formData.password}
             onChange={handleChange('password')}
-            InputProps={{
+            slotProps={{
               endAdornment: (
                 <InputAdornment position="end">
                   <IconButton

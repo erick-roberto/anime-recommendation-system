@@ -112,3 +112,11 @@ export const userService = {
     });
   },
 };
+
+export const animeService = {
+  getTopRated: () => request('/recomendacoes/top-rated'),
+  getPopulares: () => request('/recomendacoes/populares'),
+  getFilmes: () => request('/recomendacoes/movies'),
+  getShonen: () => request('/recomendacoes/shonen'), // <-- Adicione esta linha
+  getRecomendados: (userId) => request(`/recomendacoes/${userId}`),
+};
