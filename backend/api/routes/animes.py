@@ -108,9 +108,12 @@ def upsert_user_rating(
         select(func.count(Rating.anime_id))
         .where(Rating.user_id == current_user.user_id, Rating.rating != -1)
     )
-    
+
     atualizacao_agendada = False
-    if total_avaliacoes >= 5 and total_avaliacoes % 10 == 0:
+    print(f"[ROTA] total_avaliacoes = {total_avaliacoes}")
+    if total_avaliacoes == 5 or (10 <= total_avaliacoes <= 190 and total_avaliacoes % 10 == 0):
+        
+        print("[ROTA] >>> BACKGROUND DISPARADO")
         background_tasks.add_task(
             atualizar_similaridades_fast, 
             usuario_alvo_id=current_user.user_id
