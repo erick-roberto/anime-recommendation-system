@@ -77,7 +77,7 @@ def recommend_users_based(
           'name': a.name,
           'genre': a.genre,
           'type': a.type,
-          'score': a.rating,
+          'rating': a.rating,
           'members': a.members,
           'image_url': a.image_url
       }
@@ -194,7 +194,7 @@ def recommend_users_based_pearson(
             "name": a.name,
             "genre": a.genre,
             "type": a.type,
-            "score": a.rating,
+            "rating": a.rating,
             "members": a.members,
             "image_url": a.image_url
         }
